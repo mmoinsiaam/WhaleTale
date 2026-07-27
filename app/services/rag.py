@@ -3,6 +3,7 @@ from openai import OpenAI
 from app.config import openai_api_key
 from pydantic import BaseModel
 from redis_client import get_redis_client, get_index, get_vector_query
+from app.services.llm import generate_response
 
 #user query > embedding > search redis > get context > send to openai > get answer
 class userQuery(BaseModel):
@@ -28,5 +29,10 @@ def get_context(query_embedding: bytes):
     context = "\n\n".join(result["content"] for result in results)
     return context
 
+def answer(query: str) -> str:
+    embedding = embed_query(query)
+    context = get_context(embedding)
+    answer = generate_response(query, context)
+    return answer
 
 
