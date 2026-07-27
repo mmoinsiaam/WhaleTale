@@ -10,6 +10,9 @@ class userQuery(BaseModel):
 
 client = OpenAI(api_key=openai_api_key)
 redis_db = get_redis_client()
+index = SearchIndex.from_yaml(
+    "schema/redis_index.yaml"
+)
 
 def embed_query(query: str):
     response = client.embeddings.create(
