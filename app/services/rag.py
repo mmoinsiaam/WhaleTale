@@ -2,6 +2,7 @@ from openai import OpenAI
 from app.config import openai_api_key
 from pydantic import BaseModel
 from redis_client import get_redis_client, search
+from redisvl.query import VectorQuery
 
 #user query > embedding > search redis > get context > send to openai > get answer
 class userQuery(BaseModel):

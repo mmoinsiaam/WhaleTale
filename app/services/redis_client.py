@@ -4,5 +4,5 @@ from app.config import redis_url, index_name
 def get_redis_client():
     return redis.Redis.from_url(redis_url, decode_responses=True)
 
-def search(redis_client, query_embedding):
-    return redis_client.ft(index_name).search(query_embedding)
+def search(index, query_embedding): #boilerplate
+    return 0
