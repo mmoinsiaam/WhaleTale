@@ -3,7 +3,7 @@ from app.config import openai_api_key
 
 client = OpenAI(api_key=openai_api_key)
 
-def generate_response(query: str, context: str) -> str:
+def generate_response(query: str, context: str):
     system_prompt = "You are a marine biology expert assistant. Use the context provided to answer the user's question. Prefer the provided context when it's "
     "relevant, but you may also use your own marine biology knowledge to answer fully. "
     "Only answer questions about marine biology, for anything else, politely decline "
@@ -18,4 +18,12 @@ def generate_response(query: str, context: str) -> str:
             {"role": "user", "content": user_prompt}
         ]
     )
-    return response.choices[0].message.content
+
+    return {
+        "answer": response.choices[0].message.content,
+        "usage": {
+            "prompt_tokens": response.usage.prompt_tokens,
+            "completion_tokens": response.usage.completion_tokens,
+            "total_tokens": response.usage.total_tokens
+        }
+    }

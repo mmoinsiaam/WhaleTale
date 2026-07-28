@@ -1,3 +1,5 @@
+from time import time
+import logging
 import numpy as np
 from openai import OpenAI
 from app.config import openai_api_key
@@ -13,6 +15,7 @@ client = OpenAI(api_key=openai_api_key)
 redis_db = get_redis_client()
 index = get_index()
 index.connect(redis_db)
+logger = logging.getLogger(__name__)
 
 def embed_query(query: str):
     response = client.embeddings.create(
@@ -30,9 +33,23 @@ def get_context(query_embedding: bytes):
     return context
 
 def answer(query: str) -> str:
+    start = time.time()
+
     embedding = embed_query(query)
     context = get_context(embedding)
-    answer = generate_response(query, context)
-    return answer
+    response = generate_response(query, context)
+
+    latency = time.time() - start
+    logger.info({
+        "query": query,
+        "documents_retrieved": len(context),
+        "distances": [
+            r["distance"]
+            for r in context
+        ],
+        "latency_seconds": latency,
+        "tokens": response["usage"]
+    })
+    return response
 
 
