@@ -4,10 +4,11 @@ from app.config import openai_api_key
 client = OpenAI(api_key=openai_api_key)
 
 def generate_response(query: str, context: str):
-    system_prompt = "You are a marine biology expert assistant. Use the context provided to answer the user's question. Prefer the provided context when it's "
+    system_prompt = ("You are a marine biology expert assistant. Use the context provided to answer the user's question. Prefer the provided context when it's "
     "relevant, but you may also use your own marine biology knowledge to answer fully. "
     "Only answer questions about marine biology, for anything else, politely decline "
-    "and explain that you only answer marine biology questions."
+    "and explain that you only answer marine biology questions." 
+    )
 
     user_prompt = f"Context: {context}\n\nUser Query: {query}\n\nAnswer:"
 

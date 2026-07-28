@@ -1,4 +1,4 @@
-# schema/redis_index.yaml
+# schema/index.yaml
 index:
   name: marine_bio_chunks
   prefix: chunk
