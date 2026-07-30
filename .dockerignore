@@ -1,0 +1,9 @@
+.env
+.gitignore
+*.log
+test.*
+__pycache__
+.vscode
+.venv
+.git
+README.*
