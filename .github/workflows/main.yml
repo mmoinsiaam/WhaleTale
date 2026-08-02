@@ -1,0 +1,82 @@
+name: Deploy Infra + App
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write   # required for OIDC
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  TF_WORKING_DIR: ./terraform
+  ECR_REPOSITORY: rag-api                 # match the name pattern Terraform creates
+  ECS_CLUSTER: whale-pod
+  ECS_SERVICE: whale-service
+  ECS_TASK_DEFINITION_FAMILY: rag-api-pod
+
+jobs:
+  deploy:
+    name: Terraform + Build + Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # --- Auth: OIDC federation, no stored keys ---
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init
+
+      # Creating ECR repo first using target so we can later push.
+      - name: Terraform apply (target ECR repo only)
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform apply -auto-approve -target=aws_ecr_repository.rag_api
+
+      - name: Get ECR repository URL
+        id: ecr
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          echo "repo_url=$(terraform output -raw ecr_repository_url)" >> "$GITHUB_OUTPUT"
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" .
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+
+      # Fully apply terraform
+      - name: Terraform apply (full)
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          TF_VAR_image_tag: ${{ github.sha }}
+        run: terraform apply -auto-approve
+
+      - name: Force new ECS deployment
+        run: |
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --force-new-deployment
