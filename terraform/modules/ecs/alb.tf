@@ -4,6 +4,10 @@ resource "aws_lb" "this" {
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
   subnets            = var.public_subnet_ids
+
+  tags = {
+    Component = "backend"
+  }
 }
 
 resource "aws_lb_target_group" "this" {
@@ -16,7 +20,7 @@ resource "aws_lb_target_group" "this" {
   health_check {
     path                = var.health_check_path
     healthy_threshold   = 2
-    unhealthy_threshold = 3
+    unhealthy_threshold = 3 # needs 3 consec. failures to cut off a target
     interval            = 30
     timeout             = 5
   }
