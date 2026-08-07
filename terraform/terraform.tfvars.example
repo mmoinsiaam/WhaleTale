@@ -1,0 +1,17 @@
+aws_region = "us-east-1"
+
+# Change this if deploying in another region.
+# You may need to update availability zones depending on the region.
+project_name = "whaletale"
+
+# Public URL for the Redis snapshot used to initialize the vector database.
+# Replace only if using a different database dump.
+redis_rdb_url = "https://example.com/path/to/dump.rdb"
+
+# Replace with your own OpenAI API key.
+# Do NOT commit real API keys.
+openai_api_key = "sk-your-key-here"
+
+# Add your public IP for temporary ALB access during testing.
+# Example: ["123.45.67.89/32"]
+dev_access_cidrs = ["YOUR_IP/32"]
