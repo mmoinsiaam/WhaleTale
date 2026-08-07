@@ -42,11 +42,11 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_managed" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Task def: Consumes the image from the ECR push step
+# Task def: Basically the docker compose of ECS
 resource "aws_ecs_task_definition" "this" {
   family                   = var.task_family
   requires_compatibilities = ["FARGATE"]
-  network_mode             = "awsvpc"
+  network_mode             = "awsvpc" # makes sure each task gets its own ENI for its own sg and private ip
   cpu                      = var.cpu
   memory                   = var.memory
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
@@ -65,7 +65,7 @@ resource "aws_ecs_task_definition" "this" {
         containerPort = var.container_port
         protocol      = "tcp"
       }]
-      # rag-api talks to redis over localhost since both containers
+      # rag-api talks to redis over localhost since both containers share the same task-local network namespace (awsvpc mode)
       environment = [
         {
           name  = "REDIS_URL"
@@ -99,11 +99,11 @@ resource "aws_ecs_task_definition" "this" {
       image     = var.redis_init_image
       essential = false
 
-      user = "0"
+      user = "0"  #gives root access for init to properly write to the shared volume
       command = [
         "-fsSL",
         "-o", "/data/dump.rdb",
-        var.redis_rdb_url
+        var.redis_rdb_url #download .rdb snapshot from this url into shared volume (redis-data)
       ]
       mountPoints = [
         {
@@ -131,8 +131,7 @@ resource "aws_ecs_task_definition" "this" {
           condition     = "COMPLETE"
         }
       ]
-      # --dir/--dbfilename point redis at the file redis-init just wrote,
-      # so it loads that snapshot into memory on boot.
+      # --dir/--dbfilename point redis at the file redis-init just wrote
       command = [
         "redis-stack-server",
         "--dir",
@@ -152,7 +151,7 @@ resource "aws_ecs_task_definition" "this" {
       ]
       healthCheck = {
         command     = ["CMD-SHELL", "redis-cli ping || exit 1"]
-        interval    = 10
+        interval    = 15
         timeout     = 5
         retries     = 3
         startPeriod = 10
