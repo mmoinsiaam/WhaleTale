@@ -6,3 +6,6 @@ test.*
 *.log
 notes.*
 *.tfvars
+*.tfstate
+*.tfstate.*
+.terraform/
