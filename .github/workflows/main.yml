@@ -72,6 +72,10 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
         env:
           TF_VAR_image_tag: ${{ github.sha }}
+          TF_VAR_aws_region: "us-east-1"
+          TF_VAR_redis_rdb_url: "https://pub-603d4769be0f42ad837ab46dce1a9be7.r2.dev/dump.rdb"
+          TF_VAR_openai_api_key: ${{ secrets.OPEN_AI_API_KEY }}
+          
         run: terraform apply -auto-approve
 
       - name: Force new ECS deployment
