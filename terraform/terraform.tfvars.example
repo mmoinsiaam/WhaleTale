@@ -6,7 +6,7 @@ project_name = "whaletale"
 
 # Public URL for the Redis snapshot used to initialize the vector database.
 # Replace only if using a different database dump.
-redis_rdb_url = "https://example.com/path/to/dump.rdb"
+redis_rdb_url = "https://pub-603d4769be0f42ad837ab46dce1a9be7.r2.dev/dump.rdb"
 
 # Replace with your own OpenAI API key.
 # Do NOT commit real API keys.
