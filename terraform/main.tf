@@ -15,6 +15,7 @@ module "ecs" {  # set up ECS cluster, service, task definition, and ALB
   vpc_id              = module.vpc.vpc_id
   public_subnet_ids   = module.vpc.public_subnet_ids
   private_subnet_ids  = module.vpc.private_subnet_ids
+  region             = var.aws_region
 
   dev_access_cidrs           = var.dev_access_cidrs
   redis_rdb_url              = var.redis_rdb_url
