@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #14171F;
+    --ink-raised: #1A1E28;
+    --parchment: #EDE8DE;
+    --parchment-dim: #A8A398;
+    --amber: #C98F4A;
+    --amber-dim: #7A5A34;
+    --teal: #4A8C82;
+    --line: #2A2F3C;
+    --danger: #C9604A;
+    --radius: 14px;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html, body{
+    height: 100%;
+    margin: 0;
+    background: var(--ink);
+    color: var(--parchment);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body{
+    display: flex;
+    flex-direction: column;
+  }
+
+  /*  Header  */
+  header{
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, var(--ink) 0%, rgba(20,23,31,0.97) 100%);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .brand{
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .brand h1{
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 20px;
+    letter-spacing: 0.2px;
+    margin: 0;
+    color: var(--parchment);
+  }
+
+  .brand .subtitle{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--parchment-dim);
+    letter-spacing: 0.04em;
+  }
+
+  .status{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--parchment-dim);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .status-dot{
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--teal);
+    box-shadow: 0 0 0 3px rgba(74,140,130,0.18);
+  }
+
+  .status.busy .status-dot{
+    background: var(--amber);
+    box-shadow: 0 0 0 3px rgba(201,143,74,0.18);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+
+  @keyframes pulse{
+    0%, 100%{ opacity: 1; }
+    50%{ opacity: 0.35; }
+  }
+
+  .icon-btn{
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--parchment-dim);
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+
+  .icon-btn:hover{
+    border-color: var(--amber-dim);
+    color: var(--parchment);
+  }
+
+  .icon-btn:focus-visible, .icon-btn:focus{
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
+  }
+
+  /* ---------- Thread ---------- */
+  main{
+    flex: 1 1 auto;
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+    padding: 32px 20px 12px;
+  }
+
+  .thread{
+    width: 100%;
+    max-width: 720px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .empty-state{
+    margin: auto;
+    text-align: center;
+    max-width: 380px;
+    color: var(--parchment-dim);
+  }
+
+  .empty-state .mark{
+    font-family: 'Fraunces', serif;
+    font-size: 26px;
+    color: var(--parchment);
+    margin-bottom: 8px;
+  }
+
+  .empty-state p{
+    font-size: 13.5px;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .row{
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .row.user{
+    flex-direction: row-reverse;
+  }
+
+  .avatar{
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    margin-top: 2px;
+  }
+
+  .row.assistant .avatar{
+    background: rgba(201,143,74,0.14);
+    color: var(--amber);
+    border: 1px solid rgba(201,143,74,0.3);
+  }
+
+  .row.user .avatar{
+    background: rgba(74,140,130,0.14);
+    color: var(--teal);
+    border: 1px solid rgba(74,140,130,0.3);
+  }
+
+  .bubble-col{
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 78%;
+  }
+
+  .row.user .bubble-col{
+    align-items: flex-end;
+  }
+
+  .meta{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--parchment-dim);
+    letter-spacing: 0.03em;
+    padding: 0 2px;
+  }
+
+  .bubble{
+    padding: 12px 15px;
+    border-radius: var(--radius);
+    font-size: 14.5px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  .row.assistant .bubble{
+    background: var(--ink-raised);
+    border: 1px solid var(--line);
+    border-top-left-radius: 4px;
+    color: var(--parchment);
+  }
+
+  .row.user .bubble{
+    background: rgba(74,140,130,0.16);
+    border: 1px solid rgba(74,140,130,0.35);
+    border-top-right-radius: 4px;
+    color: var(--parchment);
+  }
+
+  /* thinking waveform — signature element */
+  .waveform{
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 16px;
+    padding: 2px 4px;
+  }
+
+  .waveform span{
+    display: block;
+    width: 2.5px;
+    border-radius: 2px;
+    background: var(--amber);
+    animation: wave 0.9s ease-in-out infinite;
+  }
+
+  .waveform span:nth-child(1){ height: 6px;  animation-delay: 0s; }
+  .waveform span:nth-child(2){ height: 12px; animation-delay: 0.1s; }
+  .waveform span:nth-child(3){ height: 16px; animation-delay: 0.2s; }
+  .waveform span:nth-child(4){ height: 10px; animation-delay: 0.3s; }
+  .waveform span:nth-child(5){ height: 6px;  animation-delay: 0.4s; }
+
+  @keyframes wave{
+    0%, 100%{ transform: scaleY(0.4); opacity: 0.6; }
+    50%{ transform: scaleY(1); opacity: 1; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .waveform span{ animation: none; transform: scaleY(0.8); }
+    .status.busy .status-dot{ animation: none; }
+  }
+
+  /* ---------- Composer ---------- */
+  .composer-wrap{
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: center;
+    padding: 14px 20px 22px;
+    background: linear-gradient(0deg, var(--ink) 55%, rgba(20,23,31,0));
+  }
+
+  .composer{
+    width: 100%;
+    max-width: 720px;
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    background: var(--ink-raised);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 8px 8px 8px 16px;
+    transition: border-color 0.15s ease;
+  }
+
+  .composer:focus-within{
+    border-color: var(--amber-dim);
+  }
+
+  .composer textarea{
+    flex: 1 1 auto;
+    background: none;
+    border: none;
+    outline: none;
+    resize: none;
+    color: var(--parchment);
+    font-family: 'Inter', sans-serif;
+    font-size: 14.5px;
+    line-height: 1.5;
+    max-height: 160px;
+    padding: 8px 0;
+  }
+
+  .composer textarea::placeholder{
+    color: var(--parchment-dim);
+  }
+
+  .send-btn{
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: none;
+    background: var(--amber);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+
+  .send-btn:hover{ background: #d69c5c; }
+  .send-btn:active{ transform: scale(0.94); }
+
+  .send-btn:disabled{
+    background: var(--line);
+    color: var(--parchment-dim);
+    cursor: not-allowed;
+  }
+
+  .send-btn:focus-visible{
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
+  }
+
+  .hint{
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--parchment-dim);
+    margin-top: 10px;
+    letter-spacing: 0.02em;
+  }
+
+  /* ---------- Scrollbar ---------- */
+  main::-webkit-scrollbar{ width: 8px; }
+  main::-webkit-scrollbar-thumb{ background: var(--line); border-radius: 4px; }
+  main::-webkit-scrollbar-track{ background: transparent; }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 560px){
+    header{ padding: 14px 16px; }
+    main{ padding: 20px 12px 8px; }
+    .composer-wrap{ padding: 10px 12px 16px; }
+    .bubble-col{ max-width: 88%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>WhaleTale</h1>
+    <span class="subtitle">SINGLE SESSION</span>
+  </div>
+  <div style="display:flex; align-items:center; gap:14px;">
+    <div class="status" id="status">
+      <span class="status-dot"></span>
+      <span id="statusText">Ready</span>
+    </div>
+    <button class="icon-btn" id="resetBtn" title="Clear conversation" aria-label="Clear conversation">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="1 4 1 10 7 10"></polyline>
+        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <div class="thread" id="thread">
+    <div class="empty-state" id="emptyState">
+      <div class="mark">&mdash;</div>
+      <p>No history to browse — this is a single, focused conversation.<br>Ask something to begin.</p>
+    </div>
+  </div>
+</main>
+
+<div class="composer-wrap">
+  <div style="width:100%; max-width:720px;">
+    <div class="composer">
+      <textarea
+        id="input"
+        rows="1"
+        placeholder="Message the assistant..."
+        aria-label="Message"
+      ></textarea>
+      <button class="send-btn" id="sendBtn" aria-label="Send message" disabled>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="19" x2="12" y2="5"></line>
+          <polyline points="5 12 12 5 19 12"></polyline>
+        </svg>
+      </button>
+    </div>
+    <div class="hint">Enter to send · Shift + Enter for a new line</div>
+  </div>
+</div>
+
+<script>
+  const thread = document.getElementById('thread');
+  const emptyState = document.getElementById('emptyState');
+  const input = document.getElementById('input');
+  const sendBtn = document.getElementById('sendBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const statusEl = document.getElementById('status');
+  const statusText = document.getElementById('statusText');
+  const main = document.getElementById('main');
+
+  // In-memory only — single session, nothing persisted, nothing to browse.
+  let messages = [];
+
+  function timestamp(){
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function render(){
+    thread.querySelectorAll('.row').forEach(el => el.remove());
+    const thinkingRow = thread.querySelector('.row-thinking');
+    if (thinkingRow) thinkingRow.remove();
+
+    emptyState.style.display = messages.length ? 'none' : 'block';
+
+    messages.forEach(msg => {
+      const row = document.createElement('div');
+      row.className = `row ${msg.role}`;
+
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar';
+      avatar.textContent = msg.role === 'user' ? 'You' : 'AI';
+
+      const col = document.createElement('div');
+      col.className = 'bubble-col';
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.textContent = `${msg.role === 'user' ? 'You' : 'Assistant'} · ${msg.time}`;
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.textContent = msg.text;
+
+      col.appendChild(meta);
+      col.appendChild(bubble);
+      row.appendChild(avatar);
+      row.appendChild(col);
+      thread.appendChild(row);
+    });
+
+    main.scrollTop = main.scrollHeight;
+  }
+
+  function showThinking(){
+    const row = document.createElement('div');
+    row.className = 'row assistant row-thinking';
+
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = 'AI';
+
+    const col = document.createElement('div');
+    col.className = 'bubble-col';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.innerHTML = '<div class="waveform"><span></span><span></span><span></span><span></span><span></span></div>';
+
+    col.appendChild(bubble);
+    row.appendChild(avatar);
+    row.appendChild(col);
+    thread.appendChild(row);
+    main.scrollTop = main.scrollHeight;
+  }
+
+  function setBusy(isBusy){
+    statusEl.classList.toggle('busy', isBusy);
+    statusText.textContent = isBusy ? 'Thinking' : 'Ready';
+    sendBtn.disabled = isBusy || !input.value.trim();
+    input.disabled = isBusy;
+  }
+
+  // Relative path — the page loads from your CloudFront distribution, and
+  // the /query cache behavior forwards straight through to the ALB origin
+  // (which routes to the ECS-hosted chat service). No hardcoded domain
+  // needed, so this works the same in every environment.
+  const CHAT_ENDPOINT = '/query';
+
+  async function getAssistantReply(userText){
+    const res = await fetch(CHAT_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: userText })
+    });
+
+    if (!res.ok){
+      throw new Error(`Chat request failed: ${res.status}`);
+    }
+
+    const data = await res.json();
+    return data.answer;
+  }
+
+  async function handleSend(){
+    const text = input.value.trim();
+    if (!text) return;
+
+    messages.push({ role: 'user', text, time: timestamp() });
+    input.value = '';
+    autoResize();
+    render();
+    setBusy(true);
+    showThinking();
+
+    try{
+      const reply = await getAssistantReply(text);
+      messages.push({ role: 'assistant', text: reply, time: timestamp() });
+    } catch (err){
+      messages.push({ role: 'assistant', text: 'Something went wrong reaching the assistant. Try again.', time: timestamp() });
+    } finally{
+      setBusy(false);
+      render();
+    }
+  }
+
+  function autoResize(){
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+    sendBtn.disabled = !input.value.trim();
+  }
+
+  input.addEventListener('input', autoResize);
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey){
+      e.preventDefault();
+      if (!sendBtn.disabled) handleSend();
+    }
+  });
+
+  sendBtn.addEventListener('click', handleSend);
+
+  resetBtn.addEventListener('click', () => {
+    messages = [];
+    render();
+    input.focus();
+  });
+
+  render();
+</script>
+
+</body>
+</html>
