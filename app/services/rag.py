@@ -1,5 +1,7 @@
+from ast import List
 import time
 import logging
+from typing import Optional
 import numpy as np
 from openai import OpenAI
 from app.config import openai_api_key, redis_url
@@ -8,8 +10,14 @@ from app.services.redis_client import get_redis_client, get_index, get_vector_qu
 from app.services.llm import generate_response
 
 #user query > embedding > search redis > get context > send to openai > get answer
+
+class HistoryTurn(BaseModel):
+    query: str
+    answer: str
+
 class UserQuery(BaseModel):
     query: str
+    history: Optional[List[HistoryTurn]] = None
 
 logging.basicConfig(
     level=logging.INFO,
@@ -40,18 +48,19 @@ def get_context(query_embedding: bytes):
         "results": results
     }
 
-def answer(query: str) -> str:
+def answer(query: str, history: Optional[List[HistoryTurn]] = None) -> str:
     start = time.time()
 
     embedding = embed_query(query)
     context_object = get_context(embedding)
     context = context_object["context"]
     results = context_object["results"]
-    response = generate_response(query, context)
+    response = generate_response(query, context, history)
 
     latency = time.time() - start
     logger.info({
         "query": query,
+        "history_turns": len(history) if history else 0,
         "documents_retrieved": len(results),
         "distances": [
             r["vector_distance"]
