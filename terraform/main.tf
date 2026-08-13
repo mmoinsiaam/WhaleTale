@@ -15,10 +15,9 @@ module "ecs" {  # set up ECS cluster, service, task definition, and ALB
   vpc_id              = module.vpc.vpc_id
   public_subnet_ids   = module.vpc.public_subnet_ids
   private_subnet_ids  = module.vpc.private_subnet_ids
-  region             = var.aws_region
+  region              = var.aws_region
 
   dev_access_cidrs           = var.dev_access_cidrs
   redis_rdb_url              = var.redis_rdb_url
   openai_api_key_ssm_arn     = aws_ssm_parameter.openai_api_key.arn 
-  ssm_parameter_path_prefix  = "/rag-api/*"
 }

@@ -241,6 +241,32 @@
     color: var(--parchment);
   }
 
+  .bubble strong{
+    font-weight: 600;
+    color: var(--parchment);
+  }
+
+  .bubble code{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.9em;
+    background: rgba(255,255,255,0.08);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  .bubble pre{
+    margin: 6px 0 0;
+    padding: 10px 12px;
+    background: rgba(0,0,0,0.25);
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+
+  .bubble pre code{
+    background: none;
+    padding: 0;
+  }
+
   /* thinking waveform — signature element */
   .waveform{
     display: flex;
@@ -416,7 +442,10 @@
         </svg>
       </button>
     </div>
-    <div class="hint">Enter to send · Shift + Enter for a new line</div>
+    <div class="hint">
+      Enter to send · Shift + Enter for a new line
+      <span id="wordCount" style="float:right;"></span>
+    </div>
   </div>
 </div>
 
@@ -430,14 +459,54 @@
   const statusText = document.getElementById('statusText');
   const main = document.getElementById('main');
 
-  // In-memory only — single session, nothing persisted, nothing to browse.
-  let messages = [];
+  // Persisted for the browser tab's session only (sessionStorage), cleared
+  // when the tab closes or the user hits reset — still "single session",
+  // just one that survives an accidental refresh.
+  const STORAGE_KEY = 'whaletale_messages';
+  const MAX_WORDS = 400;
+  const HISTORY_TURNS = 4; // previous 4 Q&A pairs sent as context
+
+  function loadMessages(){
+    try{
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (err){
+      return [];
+    }
+  }
+
+  function saveMessages(){
+    try{
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    } catch (err){
+      // sessionStorage unavailable/full — fail silently, chat still works in-memory
+    }
+  }
+
+  let messages = loadMessages();
 
   function timestamp(){
     return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
-  function render(){
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // Minimal, safe markdown: escapes HTML first (so no injection is possible),
+  // then converts **bold**, *italic*, `code`, and newlines. Intentionally
+  // small in scope — just enough for the formatting the assistant actually uses.
+  function formatMessage(text){
+    let safe = escapeHtml(text);
+    safe = safe.replace(/```([\s\S]*?)```/g, (_, code) => `<pre><code>${code}</code></pre>`);
+    safe = safe.replace(/`([^`]+)`/g, '<code>$1</code>');
+    safe = safe.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    safe = safe.replace(/(^|[^*])\*([^*]+)\*(?!\*)/g, '$1<em>$2</em>');
+    safe = safe.replace(/\n/g, '<br>');
+    return safe;
+  }
     thread.querySelectorAll('.row').forEach(el => el.remove());
     const thinkingRow = thread.querySelector('.row-thinking');
     if (thinkingRow) thinkingRow.remove();
@@ -461,7 +530,7 @@
 
       const bubble = document.createElement('div');
       bubble.className = 'bubble';
-      bubble.textContent = msg.text;
+      bubble.innerHTML = formatMessage(msg.text);
 
       col.appendChild(meta);
       col.appendChild(bubble);
@@ -498,7 +567,7 @@
   function setBusy(isBusy){
     statusEl.classList.toggle('busy', isBusy);
     statusText.textContent = isBusy ? 'Thinking' : 'Ready';
-    sendBtn.disabled = isBusy || !input.value.trim();
+    sendBtn.disabled = isBusy || !input.value.trim() || wordCount(input.value) > MAX_WORDS;
     input.disabled = isBusy;
   }
 
@@ -508,11 +577,23 @@
   // needed, so this works the same in every environment.
   const CHAT_ENDPOINT = '/query';
 
-  async function getAssistantReply(userText){
+  function buildHistory(){
+    // messages (before this turn's user message is pushed) is oldest-first;
+    // take the last HISTORY_TURNS user/assistant pairs.
+    const pairs = [];
+    for (let i = 0; i < messages.length - 1; i++){
+      if (messages[i].role === 'user' && messages[i + 1] && messages[i + 1].role === 'assistant'){
+        pairs.push({ query: messages[i].text, answer: messages[i + 1].text });
+      }
+    }
+    return pairs.slice(-HISTORY_TURNS);
+  }
+
+  async function getAssistantReply(userText, history){
     const res = await fetch(CHAT_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: userText })
+      body: JSON.stringify({ query: userText, history })
     });
 
     if (!res.ok){
@@ -523,11 +604,20 @@
     return data.answer;
   }
 
+  function wordCount(text){
+    const trimmed = text.trim();
+    return trimmed ? trimmed.split(/\s+/).length : 0;
+  }
+
   async function handleSend(){
     const text = input.value.trim();
     if (!text) return;
+    if (wordCount(text) > MAX_WORDS) return; // guarded, button is also disabled in this state
+
+    const history = buildHistory();
 
     messages.push({ role: 'user', text, time: timestamp() });
+    saveMessages();
     input.value = '';
     autoResize();
     render();
@@ -535,11 +625,12 @@
     showThinking();
 
     try{
-      const reply = await getAssistantReply(text);
+      const reply = await getAssistantReply(text, history);
       messages.push({ role: 'assistant', text: reply, time: timestamp() });
     } catch (err){
       messages.push({ role: 'assistant', text: 'Something went wrong reaching the assistant. Try again.', time: timestamp() });
     } finally{
+      saveMessages();
       setBusy(false);
       render();
     }
@@ -548,7 +639,13 @@
   function autoResize(){
     input.style.height = 'auto';
     input.style.height = Math.min(input.scrollHeight, 160) + 'px';
-    sendBtn.disabled = !input.value.trim();
+
+    const count = wordCount(input.value);
+    const wordCountEl = document.getElementById('wordCount');
+    wordCountEl.textContent = `${count} / ${MAX_WORDS} words`;
+    wordCountEl.style.color = count > MAX_WORDS ? 'var(--danger)' : 'var(--parchment-dim)';
+
+    sendBtn.disabled = !input.value.trim() || count > MAX_WORDS;
   }
 
   input.addEventListener('input', autoResize);
@@ -564,11 +661,13 @@
 
   resetBtn.addEventListener('click', () => {
     messages = [];
+    saveMessages();
     render();
     input.focus();
   });
 
   render();
+  autoResize();
 </script>
 
 </body>

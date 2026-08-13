@@ -62,7 +62,7 @@ resource "aws_cloudfront_distribution" "this" {
     path_pattern             = var.api_path_pattern
     target_origin_id          = "alb-chat-api"
     viewer_protocol_policy    = "redirect-to-https"
-    allowed_methods            = ["GET", "HEAD", "OPTIONS", "POST"] # POST only
+    allowed_methods            = ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
     cached_methods              = ["GET", "HEAD"]
     compress                    = true
     cache_policy_id             = data.aws_cloudfront_cache_policy.caching_disabled.id

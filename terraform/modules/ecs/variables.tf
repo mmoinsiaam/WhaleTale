@@ -67,11 +67,6 @@ variable "memory" {
   default = 1024
 }
 
-variable "ssm_parameter_path_prefix" {
-  description = "SSM path the task role may read"
-  type        = string
-}
-
 variable "log_retention_days" {
   type    = number
   default = 14

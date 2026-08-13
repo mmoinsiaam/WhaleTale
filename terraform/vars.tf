@@ -19,11 +19,6 @@ variable "dev_access_cidrs" {
   type = list(string)
 }
 
-variable "alb_dns_name" {
-  description = "DNS name of the ALB that fronts the ECS chat API (e.g. from aws_lb.this.dns_name)"
-  type        = string
-}
-
 variable "alb_origin_protocol_policy" {
   description = "Protocol CloudFront uses to talk to the ALB origin."
   type        = string
