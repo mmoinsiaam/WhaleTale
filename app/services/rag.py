@@ -8,16 +8,9 @@ from app.config import openai_api_key, redis_url
 from pydantic import BaseModel
 from app.services.redis_client import get_index, get_vector_query
 from app.services.llm import generate_response, rewrite_query_with_history
+from app.schema.models import HistoryTurn
 
 #user query > embedding > search redis > get context > send to openai > get answer
-
-class HistoryTurn(BaseModel):
-    query: str
-    answer: str
-
-class UserQuery(BaseModel):
-    query: str
-    history: Optional[List[HistoryTurn]] = None
 
 logging.basicConfig(
     level=logging.INFO,

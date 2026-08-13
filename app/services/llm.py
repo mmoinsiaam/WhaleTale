@@ -1,7 +1,7 @@
 from typing import List, Optional
 from openai import OpenAI
 from app.config import openai_api_key
-from app.services.rag import HistoryTurn
+from app.schema.models import HistoryTurn
 
 client = OpenAI(api_key=openai_api_key)
 

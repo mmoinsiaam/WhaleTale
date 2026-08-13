@@ -1,10 +1,9 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
-from app.services.rag import UserQuery, answer 
+from app.schema.models import UserQuery, QueryResponse
+from app.services.rag import answer 
 
 
-class QueryResponse(BaseModel):
-    answer: str
+
 
 app = FastAPI()
 
