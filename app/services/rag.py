@@ -6,8 +6,8 @@ import numpy as np
 from openai import OpenAI
 from app.config import openai_api_key, redis_url
 from pydantic import BaseModel
-from app.services.redis_client import get_redis_client, get_index, get_vector_query
-from app.services.llm import generate_response
+from app.services.redis_client import get_index, get_vector_query
+from app.services.llm import generate_response, rewrite_query_with_history
 
 #user query > embedding > search redis > get context > send to openai > get answer
 
@@ -50,8 +50,9 @@ def get_context(query_embedding: bytes):
 
 def answer(query: str, history: Optional[List[HistoryTurn]] = None) -> str:
     start = time.time()
+    retrieval_query = rewrite_query_with_history(query, history)
 
-    embedding = embed_query(query)
+    embedding = embed_query(retrieval_query)
     context_object = get_context(embedding)
     context = context_object["context"]
     results = context_object["results"]
@@ -60,7 +61,7 @@ def answer(query: str, history: Optional[List[HistoryTurn]] = None) -> str:
     latency = time.time() - start
     logger.info({
         "query": query,
-        "history_turns": len(history) if history else 0,
+        "retrieval_query": retrieval_query,
         "documents_retrieved": len(results),
         "distances": [
             r["vector_distance"]
