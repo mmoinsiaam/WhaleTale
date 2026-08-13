@@ -1,15 +1,23 @@
+from ast import List
 import time
 import logging
+from typing import Optional
 import numpy as np
 from openai import OpenAI
 from app.config import openai_api_key, redis_url
 from pydantic import BaseModel
-from app.services.redis_client import get_redis_client, get_index, get_vector_query
-from app.services.llm import generate_response
+from app.services.redis_client import get_index, get_vector_query
+from app.services.llm import generate_response, rewrite_query_with_history
 
 #user query > embedding > search redis > get context > send to openai > get answer
+
+class HistoryTurn(BaseModel):
+    query: str
+    answer: str
+
 class UserQuery(BaseModel):
     query: str
+    history: Optional[List[HistoryTurn]] = None
 
 logging.basicConfig(
     level=logging.INFO,
@@ -40,18 +48,20 @@ def get_context(query_embedding: bytes):
         "results": results
     }
 
-def answer(query: str) -> str:
+def answer(query: str, history: Optional[List[HistoryTurn]] = None) -> str:
     start = time.time()
+    retrieval_query = rewrite_query_with_history(query, history)
 
-    embedding = embed_query(query)
+    embedding = embed_query(retrieval_query)
     context_object = get_context(embedding)
     context = context_object["context"]
     results = context_object["results"]
-    response = generate_response(query, context)
+    response = generate_response(query, context, history)
 
     latency = time.time() - start
     logger.info({
         "query": query,
+        "retrieval_query": retrieval_query,
         "documents_retrieved": len(results),
         "distances": [
             r["vector_distance"]

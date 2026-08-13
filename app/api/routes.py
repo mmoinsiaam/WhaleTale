@@ -10,7 +10,7 @@ app = FastAPI()
 
 @app.post("/query", response_model=QueryResponse)
 def query_endpoint(queryRequest: UserQuery):
-    response = answer(queryRequest.query)
+    response = answer(queryRequest.query, queryRequest.history)
     return QueryResponse(answer=response)
 
 @app.get("/health")
