@@ -84,6 +84,7 @@ def answer(query: str, history: Optional[List[HistoryTurn]] = None) -> str:
         ],
         "latency_seconds": latency,
         "AvgVectorDistance": avg_distance,
+        "total_tokens": total_t,
         "tokens": {
             "prompt": prompt_t,
             "completion": completion_t,
