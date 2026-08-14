@@ -1,11 +1,10 @@
-from ast import List
 import time
 import logging
-from typing import Optional
+from typing import List, Optional
 import numpy as np
 from openai import OpenAI
+import json
 from app.config import openai_api_key, redis_url
-from pydantic import BaseModel
 from app.services.redis_client import get_index, get_vector_query
 from app.services.llm import generate_response, rewrite_query_with_history
 from app.schema.models import HistoryTurn
@@ -51,8 +50,31 @@ def answer(query: str, history: Optional[List[HistoryTurn]] = None) -> str:
     results = context_object["results"]
     response = generate_response(query, context, history)
 
+    # vars needed for logs
+    distances = [float(r["vector_distance"]) for r in results]
+    avg_distance = sum(distances) / len(distances) if distances else 0.0
+    prompt_t = response["usage"]["prompt_tokens"]
+    completion_t = response["usage"]["completion_tokens"]
+    total_t = response["usage"]["total_tokens"]
+
     latency = time.time() - start
-    logger.info({
+    logger.info(json.dumps({    # emf format for cloudwatch metrics
+        "_aws": {
+            "Timestamp": int(time.time() * 1000),
+            "CloudWatchMetrics": [
+                {
+                    "Namespace": "RAG/VectorSearch",
+                    "Dimensions": [["Service"]],
+                    "Metrics": [
+                        {"Name": "latency_seconds", "Unit": "Seconds"},
+                        {"Name": "documents_retrieved", "Unit": "Count"},
+                        {"Name": "total_tokens", "Unit": "Count"},
+                        {"Name": "AvgVectorDistance", "Unit": "None"}
+                    ]
+                }
+            ]
+        },
+        "Service": "rag-api",
         "query": query,
         "retrieval_query": retrieval_query,
         "documents_retrieved": len(results),
@@ -61,8 +83,14 @@ def answer(query: str, history: Optional[List[HistoryTurn]] = None) -> str:
             for r in results
         ],
         "latency_seconds": latency,
-        "tokens": response["usage"]
-    })
+        "AvgVectorDistance": avg_distance,
+        "tokens": {
+            "prompt": prompt_t,
+            "completion": completion_t,
+            "total": total_t
+        }
+    }))
+
     return response["answer"]
 
 
