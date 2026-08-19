@@ -1,20 +1,5 @@
 # OIDC
 
-## Permissions needed and why
-
-| Component | Why GH Actions/Terraform needs access |
-| VPC, subnets, route tables, IGW, NAT gateway, EIP, security groups | Creating the whole network |
-| ECS (cluster, service, task definition, Fargate) | api and redis containers |
-| ECR | Push image, and the repo itself |
-| ELBv2 (ALB, target groups, listeners) | Public ALB in front of ECS |
-| CloudFront and S3 | Frontend hosting/distribution |
-| CloudWatch Logs | Log groups for both containers |
-| SSM Parameter Store | OpenAI key |
-| IAM | ECS task execution role creation |
-| EC2 managed prefix lists | Reading the AWS-managed CloudFront prefix list for ALB security group rule |
-| S3 + DynamoDB | remote Terraform state backend |
-
-
 ## Custom policies
 ```json
 {
