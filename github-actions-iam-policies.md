@@ -70,7 +70,8 @@
 ```
 
 ## Policy needed for Terraform remote state S3 
-## Also for DynamoDB state locking IF needed in future
+
+Also for DynamoDB state locking IF needed in future
 
 ```json
 {
@@ -95,7 +96,7 @@
 }
 ```
 ## Role needed for ECS task definitions. 
-## GA doesn't need it to read SSM but to create the policy for ECS
+GA doesn't need it to read SSM but to create the policy for ECS
 
 ```json
 {
