@@ -105,7 +105,7 @@ Once created, use IAM's **"Create role"** flow for this provider. It walks you t
 the trust policy to a specific GitHub org/repo automatically. AWS generates a trust policy
 equivalent to:
 
-\`\`\`json
+```json
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -126,7 +126,7 @@ equivalent to:
     }
   ]
 }
-\`\`\`
+```
 
 ### 3. Attach permissions
 Attach these AWS-managed policies to the role:
