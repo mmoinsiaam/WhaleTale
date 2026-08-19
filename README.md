@@ -90,3 +90,60 @@ This provisions the VPC, ECS cluster/service, ALB, CloudFront, IAM roles, and ev
 > **Note:** Step 1 must always be followed by step 3, even if step 2 (the build/push) fails partway. Skipping the full apply after a partial `-target` run can leave Terraform state out of sync with actual infrastructure.
 
 After the final apply is finished, Terraform will output the link for your application. Simply copy and paste it to the browser and enjoy the product !
+
+## AWS OIDC Setup (GitHub Actions) - Optional
+
+This project authenticates GitHub Actions to AWS via OIDC federation, no long-lived
+access keys are stored in the repo.
+
+### 1. Create the OIDC identity provider
+In IAM, create an identity provider:
+- Provider URL: `https://token.actions.githubusercontent.com`
+- Audience: `sts.amazonaws.com`
+
+Once created, use IAM's **"Create role"** flow for this provider. It walks you through scoping
+the trust policy to a specific GitHub org/repo automatically. AWS generates a trust policy
+equivalent to:
+
+\`\`\`json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        },
+        "StringLike": {
+          "token.actions.githubusercontent.com:sub": "repo:YOUR_GH_ORG/YOUR_REPO:*"
+        }
+      }
+    }
+  ]
+}
+\`\`\`
+
+### 3. Attach permissions
+Attach these AWS-managed policies to the role:
+- `AmazonEC2ContainerRegistryFullAccess`
+- `AmazonECS_FullAccess`
+- `ElasticLoadBalancingFullAccess`
+- `AmazonVPCFullAccess`
+- `CloudFrontFullAccess`
+- `AmazonS3FullAccess`
+- `CloudWatchLogsFullAccess`
+- `AmazonSSMFullAccess`
+- `AmazonDynamoDBFullAccess` (if using DynamoDB for state locking)
+
+Then attach the custom IAM permissions policy at [`github-actions-iam-policies.md`](./github-actions-iam-policies.md),
+which scopes policy management to the ECS task roles this project creates — deliberately
+avoiding `IAMFullAccess`, since that would let the role create new admin identities for itself.
+
+### 4. Point the workflow at the role
+In your GitHub Actions workflow, use `aws-actions/configure-aws-credentials@v4` with
+`role-to-assume` set to the role's ARN.
